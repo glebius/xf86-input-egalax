@@ -1,0 +1,87 @@
+.\" $Id: egalax.man,v 1.3 2010/06/02 07:35:28 glebius Exp $
+.ds q \N'34'
+.TH EGALAX __drivermansuffix__ __vendorversion__
+.SH NAME
+egalax \- eGalax touch screen input driver
+.SH SYNOPSIS
+.nf
+.B "Section \*qInputDevice\*q"
+.BI "  Identifier \*q" idevname \*q
+.B  "  Driver \*qegalax\*q"
+.BI "  Option \*qDevice\*q   \*q" devpath \*q
+\ \ ...
+.br
+.B EndSection
+.SH DESCRIPTION
+.B egalax 
+is an __xservername__ input driver for eGalax touchscreen devices...
+.PP
+The
+.B egalax
+driver functions as a pointer input device, and may be used as the
+X server's core pointer.
+.PP
+It is obvious that a touch panel with a stylus/finger is a one-button mouse.
+However, the
+.B egalax
+tries to overcome this limitation.
+If a user keeps stylus in one point for a certain time, then
+driver emulates release of left mouse button and then pressure on
+the right mouse button.
+The area where the stylus should be kept and time are configurable.
+.SH SUPPORTED HARDWARE
+The driver has been written for CarTFT CTF1020-S on screen touch panel,
+and is supposed to work with other similar touch panels based on eGalax.
+.PP
+The
+.B egalax
+driver requires the uep(4) kernel driver.
+.SH CONFIGURATION DETAILS
+The following driver
+.B Options
+are supported:
+.TP 7
+.BI "Option \*qDevice\*q \*q" string \*q
+.RS
+Usually \*q/dev/uep0\*q .
+.RE
+.TP 7
+.BI "Option \*qMinX\*q \*q" integer \*q
+.TP 7
+.BI "Option \*qMaxX\*q \*q" integer \*q
+.TP 7
+.BI "Option \*qMinY\*q \*q" integer \*q
+.TP 7
+.BI "Option \*qMaxY\*q \*q" integer \*q
+.RS 7
+These values configure calibration of the touch panel.
+.PP
+The touchscreen resolution is 2048 points in both directions.
+However, the onscreen part of the panel is usually smaller.
+So, the panel needs to be calibrated.
+Initial values for calibration are quite conservative, and
+the driver autocalibrates itself when user touches areas near edge
+of screen.
+After each autocalibration the driver writes suggested calibration values
+to the __xservername__ log.
+These values should be written to the __xservername__ configuration file,
+to avoid bad calibration on next run.
+.RE
+.TP 7
+.BI "Option \*qReverseY\*q \*q" boolean \*q
+Invert the Y axis.
+Default: off.
+.TP 7
+.BI "Option \*qRightClickEmulArea\*q \*q" integer \*q
+Size of the area where a stylus should be held still, before the driver
+emulates right button click.
+The default is 5 pixels.
+.TP 7
+.BI "Option \*qRightClickEmulPause\*q \*q" integer \*q
+Time the driver waits befor emulating right button pressure.
+The default is 1 second.
+.PP
+.SH "SEE ALSO"
+__xservername__(__appmansuffix__), __xconfigfile__(__filemansuffix__), xorgconfig(__appmansuffix__), Xserver(__appmansuffix__), X(__miscmansuffix__).
+.SH AUTHORS
+The driver has been written by Gleb Smirnoff
