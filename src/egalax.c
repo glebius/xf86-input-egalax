@@ -64,7 +64,6 @@ static int eGalaxPreInit(InputDriverPtr, InputInfoPtr, int);
 static void eGalaxUnInit(InputDriverPtr, InputInfoPtr, int);
 static void eGalaxReadInput(InputInfoPtr);
 static int eGalaxControl(DeviceIntPtr, int);
-static int eGalaxInitButtons(DeviceIntPtr);
 static void eGalaxCtrl(DeviceIntPtr, PtrCtrl *);
 static void eGalaxInitAxes(DeviceIntPtr);
 static void eGalaxConfigAxes(DeviceIntPtr);
@@ -188,9 +187,7 @@ eGalaxControl(DeviceIntPtr device, int what)
 
 	switch (what) {
 	case DEVICE_INIT:
-		ret = eGalaxInitButtons(device);
-		if (ret == Success)
-			eGalaxInitAxes(device);
+		eGalaxInitAxes(device);
 		break;
 
 	/* Switch device on.  Establish socket, start event delivery.  */
@@ -326,29 +323,6 @@ eGalaxReadInput(InputInfoPtr pInfo)
 	} /* while */
 }
 
-static int
-eGalaxInitButtons(DeviceIntPtr device)
-{
-	InputInfoPtr pInfo = device->public.devicePrivate;
-	unsigned char map[] = {0, 1, 2, 3};
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
-	Atom btn_label;
-#endif
-
-
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
-	if (!InitButtonClassDeviceStruct(device, 3, &btn_label, map)) {
-#else
-	if (!InitButtonClassDeviceStruct(device, 3, map)) {
-#endif
-		xf86Msg(X_ERROR, "%s: Failed to register button.\n",
-		    pInfo->name);
-		return (BadAlloc);
-	}
-
-	return (Success);
-}
-
 static void
 eGalaxCtrl(DeviceIntPtr device, PtrCtrl *ctrl)
 {
@@ -359,11 +333,11 @@ eGalaxInitAxes(DeviceIntPtr device)
 {
 	InputInfoPtr pInfo = device->public.devicePrivate;
 	eGalaxDevicePtr sc = pInfo->private;
-	unsigned char map[2] = { 0, 0 };
-	Atom btn_labels[2] = { 0, 0 };
+	unsigned char map[] = {0, 1, 2, 3};
+	Atom btn_label;
 	Atom axis_labels[2] = { 0, 0 };
 
-	InitPointerDeviceStruct((DevicePtr)device, map, 2, btn_labels,
+	InitPointerDeviceStruct((DevicePtr)device, map, 3, &btn_label,
 	    eGalaxCtrl, GetMotionHistorySize(), 2, axis_labels);
 
 	eGalaxConfigAxes(device);
