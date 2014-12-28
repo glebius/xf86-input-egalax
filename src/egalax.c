@@ -40,6 +40,7 @@
 
 #include <xf86.h>
 #include <xf86Xinput.h>
+#include <xf86_OSproc.h>
 #include <exevents.h>
 #include <xorgVersion.h>
 #include <xkbsrv.h>
@@ -61,12 +62,11 @@ static XF86ModuleVersionInfo eGalaxVersionRec =
 
 static void eGalaxUnplug(pointer p);
 static pointer eGalaxPlug(pointer, pointer, int *, int *);
-static InputInfoPtr eGalaxPreInit(InputDriverPtr, IDevPtr, int);
+static int eGalaxPreInit(InputDriverPtr, InputInfoPtr, int);
 static void eGalaxUnInit(InputDriverPtr, InputInfoPtr, int);
 static void eGalaxReadInput(InputInfoPtr);
 static int eGalaxControl(DeviceIntPtr, int);
 static int eGalaxInitButtons(DeviceIntPtr);
-static int eGalaxInitAxes(DeviceIntPtr);
 
 static void eGalaxConfigAxes(DeviceIntPtr);
 static void eGalaxCalib(InputInfoPtr, int, int);
@@ -113,40 +113,28 @@ eGalaxPlug(pointer module, pointer options, int *errmaj, int *errmin)
 	return (module);
 }
 
-static InputInfoPtr
-eGalaxPreInit(InputDriverPtr drv, IDevPtr dev, int flags)
+static int
+eGalaxPreInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
 {
-	InputInfoPtr	pInfo;
-	eGalaxDevicePtr     sc;
+	eGalaxDevicePtr sc;
 
-	if (!(pInfo = xf86AllocateInput(drv, 0)))
-		return (NULL);
+	if ((sc = calloc(1, sizeof(struct eGalaxDeviceRec))) == NULL)
+		return (BadAlloc);
 
-	sc = xcalloc(1, sizeof(struct eGalaxDeviceRec));
-	if (!sc) {
-		pInfo->private = NULL;
-		xf86DeleteInput(pInfo, 0);
-		return (NULL);
-	}
-
+	pInfo->type_name = XI_MOUSE; /* see XI.h */
+	pInfo->device_control = eGalaxControl; /* enable/disable dev */
+	pInfo->read_input = eGalaxReadInput; /* new data avl */
+	pInfo->control_proc = NULL;
+	pInfo->switch_mode = NULL;
+	pInfo->dev = NULL;
 	pInfo->private = sc;
 
-	pInfo->name = xstrdup(dev->identifier);
-	pInfo->flags = 0;
-	pInfo->type_name = XI_MOUSE; /* see XI.h */
-	pInfo->conf_idev = dev;
-	pInfo->read_input = eGalaxReadInput; /* new data avl */
-	pInfo->switch_mode = NULL; /* toggle absolute/relative mode */
-	pInfo->device_control = eGalaxControl; /* enable/disable dev */
-
 	/* process driver specific options */
-	sc->device = xf86SetStrOption(dev->commonOptions, "Device",
-	    "/dev/uep0");
-
+	sc->device = xf86SetStrOption(pInfo->options, "Device", "/dev/uep0");
 	xf86Msg(X_INFO, "%s: Using device %s.\n", pInfo->name, sc->device);
 
 	/* process generic options */
-	xf86CollectInputOptions(pInfo, NULL, NULL);
+	xf86CollectInputOptions(pInfo, NULL);
 	xf86ProcessCommonOptions(pInfo, pInfo->options);
 
 	/*
@@ -169,18 +157,14 @@ eGalaxPreInit(InputDriverPtr drv, IDevPtr dev, int flags)
 		xf86Msg(X_ERROR, "%s: failed to open %s.", pInfo->name,
 		    sc->device);
 		pInfo->private = NULL;
-		xfree(sc);
+		free(sc);
 		xf86DeleteInput(pInfo, 0);
-		return (NULL);
+		return (BadValue);
 	}
-
 	close(pInfo->fd);
 	pInfo->fd = -1;
 
-	pInfo->flags |= XI86_OPEN_ON_INIT;
-	pInfo->flags |= XI86_CONFIGURED;
-
-	return (pInfo);
+	return (Success);
 }
 
 static void
@@ -188,12 +172,9 @@ eGalaxUnInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
 {
 	eGalaxDevicePtr sc = pInfo->private;
 
-	if (sc->device) {
-		xfree(sc->device);
-		sc->device = NULL;
-	}
-
-	xfree(sc);
+	if (sc->device)
+		free(sc->device);
+	free(sc);
 	xf86DeleteInput(pInfo, 0);
 }
 
@@ -208,7 +189,7 @@ eGalaxControl(DeviceIntPtr device, int what)
 	case DEVICE_INIT:
 		ret = eGalaxInitButtons(device);
 		if (ret == Success)
-			ret = eGalaxInitAxes(device);
+			eGalaxConfigAxes(device);
 		break;
 
 	/* Switch device on.  Establish socket, start event delivery.  */
@@ -359,52 +340,20 @@ eGalaxInitButtons(DeviceIntPtr device)
 	return (Success);
 }
 
-static int
-eGalaxInitAxes(DeviceIntPtr device)
-{
-	InputInfoPtr pInfo = device->public.devicePrivate;
-	eGalaxDevicePtr sc = pInfo->private;
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
-	Atom axis_labels[2] = { 0, 0 };
-#endif
-
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
-	if (!InitValuatorClassDeviceStruct(device, 2, axis_labels, 0, Absolute))
-#else
-	if (!InitValuatorClassDeviceStruct(device, 2, 0, Absolute))
-#endif
-		return (BadAlloc);
-
-	if (!InitAbsoluteClassDeviceStruct(device))
-		return (BadAlloc);
-
-	eGalaxConfigAxes(device);
-
-	return (Success);
-}
-
 static void
 eGalaxConfigAxes(DeviceIntPtr device)
 {
 	InputInfoPtr pInfo = device->public.devicePrivate;
 	eGalaxDevicePtr sc = pInfo->private;
-#if GET_ABI_MAJOR(ABI_XINPUT_VERSION) >= 7
 	Atom axis_labels[2] = { 0, 0 };
 
 	xf86InitValuatorAxisStruct(device, 0, axis_labels[0],
-	    sc->minx, sc->maxx, 1, 1, 1);
+	    sc->minx, sc->maxx, 1, 1, 1, Absolute);
 	xf86InitValuatorDefaults(device, 0);
 
 	xf86InitValuatorAxisStruct(device, 1, axis_labels[1],
-	    sc->miny, sc->maxy, 1, 1, 1);
+	    sc->miny, sc->maxy, 1, 1, 1, Absolute);
 	xf86InitValuatorDefaults(device, 1);
-#else
-	xf86InitValuatorAxisStruct(device, 0, sc->minx, sc->maxx, 1, 1, 1);
-	xf86InitValuatorDefaults(device, 0);
-
-	xf86InitValuatorAxisStruct(device, 1, sc->miny, sc->maxy, 1, 1, 1);
-	xf86InitValuatorDefaults(device, 1);
-#endif
 }
 
 static void
