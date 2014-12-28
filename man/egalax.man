@@ -1,4 +1,3 @@
-.\" $Id: egalax.man,v 1.3 2010/06/02 07:35:28 glebius Exp $
 .ds q \N'34'
 .TH EGALAX __drivermansuffix__ __vendorversion__
 .SH NAME

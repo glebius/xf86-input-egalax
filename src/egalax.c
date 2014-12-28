@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2010 Gleb Smirnoff <glebius@FreeBSD.org>
+ * Copyright (c) 2010, 2014 Gleb Smirnoff <glebius@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $Id: egalax.c,v 1.2 2010/07/01 21:05:30 glebius Exp $
  */
 
 #ifdef HAVE_CONFIG_H
