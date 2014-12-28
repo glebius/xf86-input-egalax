@@ -67,7 +67,8 @@ static void eGalaxUnInit(InputDriverPtr, InputInfoPtr, int);
 static void eGalaxReadInput(InputInfoPtr);
 static int eGalaxControl(DeviceIntPtr, int);
 static int eGalaxInitButtons(DeviceIntPtr);
-
+static void eGalaxCtrl(DeviceIntPtr, PtrCtrl *);
+static void eGalaxInitAxes(DeviceIntPtr);
 static void eGalaxConfigAxes(DeviceIntPtr);
 static void eGalaxCalib(InputInfoPtr, int, int);
 
@@ -189,7 +190,7 @@ eGalaxControl(DeviceIntPtr device, int what)
 	case DEVICE_INIT:
 		ret = eGalaxInitButtons(device);
 		if (ret == Success)
-			eGalaxConfigAxes(device);
+			eGalaxInitAxes(device);
 		break;
 
 	/* Switch device on.  Establish socket, start event delivery.  */
@@ -338,6 +339,26 @@ eGalaxInitButtons(DeviceIntPtr device)
 	}
 
 	return (Success);
+}
+
+static void
+eGalaxCtrl(DeviceIntPtr device, PtrCtrl *ctrl)
+{
+}
+
+static void
+eGalaxInitAxes(DeviceIntPtr device)
+{
+	InputInfoPtr pInfo = device->public.devicePrivate;
+	eGalaxDevicePtr sc = pInfo->private;
+	unsigned char map[2] = { 0, 0 };
+	Atom btn_labels[2] = { 0, 0 };
+	Atom axis_labels[2] = { 0, 0 };
+
+	InitPointerDeviceStruct((DevicePtr)device, map, 2, btn_labels,
+	    eGalaxCtrl, GetMotionHistorySize(), 2, axis_labels);
+
+	eGalaxConfigAxes(device);
 }
 
 static void
