@@ -72,6 +72,12 @@ to avoid bad calibration on next run.
 Invert the Y axis.
 Default: off.
 .TP 7
+.BI "Option \*qSwapAxes\*q \*q" boolean \*q
+Some eGalax touch screen units are assembled incorrectly and have X
+and Y axes swapped.
+This configuration knob allows to swap them back.
+Default: off.
+.TP 7
 .BI "Option \*qRightClickEmulArea\*q \*q" integer \*q
 Size of the area where a stylus should be held still, before the driver
 emulates right button click.

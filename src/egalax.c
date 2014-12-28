@@ -93,6 +93,7 @@ struct eGalaxDeviceRec {
 	char		*device;
 	u_short		minx, maxx, miny, maxy;
 	u_char		revy;
+	u_char		swapaxes;
 
 	/* Second button emulator. */
 	u_char		button, area, pause;
@@ -148,6 +149,7 @@ eGalaxPreInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
 	sc->maxy = xf86SetIntOption(pInfo->options, "MaxY", 1500);
 
 	sc->revy = xf86SetBoolOption(pInfo->options, "ReverseY", TRUE);
+	sc->swapaxes = xf86SetBoolOption(pInfo->options, "SwapAxes", FALSE);
 
 	sc->area = xf86SetIntOption(pInfo->options, "RightClickEmulArea", 5);
 	sc->pause = xf86SetIntOption(pInfo->options, "RightClickEmulPause", 1);
@@ -258,6 +260,14 @@ eGalaxReadInput(InputInfoPtr pInfo)
 
 		x = (buf[1] << 7) | buf[2];
 		y = (buf[3] << 7) | buf[4];
+
+		if (sc->swapaxes) {
+			int tmp;
+
+			tmp = x;
+			x = y;
+			y = tmp;
+		}
 
 		if (x < sc->minx || x > sc->maxx ||
 		    y < sc->miny || y > sc->maxy)
